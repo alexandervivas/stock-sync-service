@@ -2,9 +2,7 @@ package com.upwork.stock;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
-@EnableConfigurationProperties
 @SpringBootApplication
 public class StockServiceApplication {
     public static void main(String[] args) {
