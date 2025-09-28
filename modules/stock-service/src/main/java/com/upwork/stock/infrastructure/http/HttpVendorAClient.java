@@ -4,6 +4,8 @@ import com.upwork.stock.application.dto.ExternalProductDto;
 import com.upwork.stock.application.ports.VendorAClient;
 import com.upwork.stock.config.StockIngestionProperties;
 import org.springframework.http.MediaType;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -22,6 +24,13 @@ public class HttpVendorAClient implements VendorAClient {
     }
 
     @Override
+    @Retryable(
+            maxAttempts = 3,
+            backoff = @Backoff(
+                    delay = 300,
+                    multiplier = 2
+            )
+    )
     public List<ExternalProductDto> fetchProducts() {
         ExternalProductDto[] response = restClient
                 .get()
