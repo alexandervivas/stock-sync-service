@@ -8,6 +8,9 @@ import com.upwork.stock.domain.product.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class StockSyncService {
@@ -24,9 +27,18 @@ public class StockSyncService {
         this.productRepository = productRepository;
     }
 
+    @Transactional
+    public void syncOnce() {
+        List<ExternalProductDto>  productsVendorA = vendorAClient.fetchProducts();
+        List<ExternalProductDto>  productsVendorB = vendorBReader.readProducts();
+
+        productsVendorA.forEach(product -> upsert("VendorA", product));
+        productsVendorB.forEach(product -> upsert("VendorB", product));
+    }
+
     private void upsert(String vendor, ExternalProductDto externalProductDto) {
         productRepository.findBySkuAndVendor(externalProductDto.sku(), vendor).ifPresentOrElse(existing -> {
-            if(existing.getStockQuantity() != null && existing.getStockQuantity() > 0 && externalProductDto.stockQuantity() == 0) {
+            if(productRanOutOfStock(externalProductDto, existing)) {
                 log.info("OUT-OF-STOCK detected sku={} vendor={} prev={} now=0", externalProductDto.sku(), vendor, existing.getStockQuantity());
             }
 
@@ -45,5 +57,11 @@ public class StockSyncService {
 
             productRepository.save(product);
         });
+    }
+
+    private boolean productRanOutOfStock(ExternalProductDto externalProductDto, Product existing) {
+        return existing.getStockQuantity() != null
+                && existing.getStockQuantity() > 0
+                && externalProductDto.stockQuantity() == 0;
     }
 }
