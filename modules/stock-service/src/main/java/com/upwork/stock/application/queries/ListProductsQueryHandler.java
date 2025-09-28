@@ -16,7 +16,7 @@ public class ListProductsQueryHandler {
         this.productRepository = productRepository;
     }
 
-    public List<ProductView> handle() {
+    public List<ProductView> handle(ListProductsQuery query) {
         return productRepository
                 .findAll()
                 .stream()
