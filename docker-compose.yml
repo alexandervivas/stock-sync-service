@@ -18,7 +18,7 @@ services:
     container_name: vendor-b
     environment:
       - VENDORB_CSVPATH=/data/stock.csv
-      - VENDORB_SCHEDULE=*/15 * * * * *
+      - VENDORB_SCHEDULE=*/5 * * * * *
       - VENDORB_GENERATESAMPLE=true
     volumes:
       - vendor_b_data:/data
@@ -34,7 +34,7 @@ services:
     environment:
       - INGESTION_VENDORA_BASEURL=http://vendor-a:8081
       - INGESTION_VENDORB_CSVPATH=/data/stock.csv
-      - INGESTION_SYNC_CRON=0 */1 * * * *
+      - INGESTION_SYNC_CRON=*/7 * * * * *
       - SERVER_PORT=8080
     ports:
       - "8080:8080"
