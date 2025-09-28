@@ -1,0 +1,8 @@
+spring:
+  main:
+    banner-mode: "off"
+
+vendorb:
+  csvPath: /data/stock.csv
+  schedule: "*/15 * * * * *"
+  generateSample: true
