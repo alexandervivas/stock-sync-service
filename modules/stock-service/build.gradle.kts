@@ -30,6 +30,10 @@ dependencies {
     // Vendor B
     implementation("org.apache.commons:commons-csv:1.11.0")
 
+    // Docs
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13")
+
+
     // tests
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.assertj:assertj-core")

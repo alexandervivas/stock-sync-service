@@ -19,3 +19,6 @@ ingestion:
     csvPath: ./data/stock.csv
   sync:
     cron: "0 */1 * * * *"
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
