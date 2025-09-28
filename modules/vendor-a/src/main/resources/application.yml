@@ -1,0 +1,6 @@
+server:
+  port: 8081  # to avoid clashing with stock-service (8080)
+
+spring:
+  main:
+    banner-mode: "off"
