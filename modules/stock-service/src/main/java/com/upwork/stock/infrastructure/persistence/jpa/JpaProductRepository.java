@@ -30,6 +30,7 @@ public class JpaProductRepository implements ProductRepository {
         return delegate.existsBySkuAndVendor(sku, vendor);
     }
 
+    // TODO: 10/12/2020 Add pagination
     @Override
     public List<Product> findAll() {
         return delegate.findAll();
