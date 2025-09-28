@@ -63,7 +63,7 @@ modules/
 
 ---
 
-## 🧪 Build & Test
+## Build & Test
 
 From the **repo root**:
 
@@ -75,7 +75,7 @@ From the **repo root**:
 
 ---
 
-## ▶️ Local run (no Docker)
+## Local run (no Docker)
 
 ### 1) Default configs
 
