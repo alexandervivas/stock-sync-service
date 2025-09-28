@@ -38,4 +38,14 @@ public class Product {
         this.vendor = vendor;
     }
 
+    public Product rename(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public Product withStockQuantity(Integer stockQuantity) {
+        this.stockQuantity = stockQuantity;
+        return this;
+    }
+
 }
