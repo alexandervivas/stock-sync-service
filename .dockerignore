@@ -1,0 +1,13 @@
+# Git/IDE
+.git
+.gitignore
+.idea
+.vscode
+*.iml
+
+# Gradle caches y builds
+.gradle
+**/build/
+
+# OS
+.DS_Store

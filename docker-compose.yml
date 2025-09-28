@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  vendor-a:
+    build:
+      context: .
+      dockerfile: deploy/docker/vendor-a.Dockerfile
+    container_name: vendor-a
+    environment:
+      - SERVER_PORT=8081
+    ports:
+      - "8081:8081"
+
+  vendor-b:
+    build:
+      context: .
+      dockerfile: deploy/docker/vendor-b.Dockerfile
+    container_name: vendor-b
+    environment:
+      - VENDORB_CSVPATH=/data/stock.csv
+      - VENDORB_SCHEDULE=*/15 * * * * *
+      - VENDORB_GENERATESAMPLE=true
+    volumes:
+      - vendor_b_data:/data
+
+  stock-service:
+    build:
+      context: .
+      dockerfile: deploy/docker/stock-service.Dockerfile
+    container_name: stock-service
+    depends_on:
+      - vendor-a
+      - vendor-b
+    environment:
+      - INGESTION_VENDORA_BASEURL=http://vendor-a:8081
+      - INGESTION_VENDORB_CSVPATH=/data/stock.csv
+      - INGESTION_SYNC_CRON=0 */1 * * * *
+      - SERVER_PORT=8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - vendor_b_data:/data
+
+volumes:
+  vendor_b_data:
