@@ -9,7 +9,7 @@ public record StockIngestionProperties(VendorA vendorA, VendorB vendorB) {
 
     }
 
-    public record VendorB(String baseUrl) {
+    public record VendorB(String csvPath) {
 
     }
 }
