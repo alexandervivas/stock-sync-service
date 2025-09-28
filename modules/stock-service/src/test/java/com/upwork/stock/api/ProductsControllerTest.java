@@ -30,7 +30,7 @@ class ProductsControllerTest {
 
     @Test
     public void listProducts() throws Exception {
-        when(listProductsQueryHandler.handle(any())).thenReturn(List.of(
+        when(listProductsQueryHandler.handle(any(ListProductsQuery.class))).thenReturn(List.of(
                 new ProductView(1L, "ABC", "A", 10, "VendorA"),
                 new ProductView(2L, "XYZ", "B",  0, "VendorB")
         ));
