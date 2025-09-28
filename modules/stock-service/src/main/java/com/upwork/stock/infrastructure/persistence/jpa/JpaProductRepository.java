@@ -4,6 +4,7 @@ import com.upwork.stock.domain.product.Product;
 import com.upwork.stock.domain.product.ProductRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -15,8 +16,8 @@ public class JpaProductRepository implements ProductRepository {
     }
 
     @Override
-    public Product save(Product product) {
-        return delegate.save(product);
+    public void save(Product product) {
+        delegate.save(product);
     }
 
     @Override
@@ -27,5 +28,10 @@ public class JpaProductRepository implements ProductRepository {
     @Override
     public Boolean existsBySkuAndVendor(String sku, String vendor) {
         return delegate.existsBySkuAndVendor(sku, vendor);
+    }
+
+    @Override
+    public List<Product> findAll() {
+        return delegate.findAll();
     }
 }
