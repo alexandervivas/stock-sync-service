@@ -1,7 +1,12 @@
 package com.upwork.stock.domain.product;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "products",
         uniqueConstraints = @UniqueConstraint(
@@ -33,27 +38,4 @@ public class Product {
         this.vendor = vendor;
     }
 
-    protected Product() {
-
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getSku() {
-        return sku;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Integer getStockQuantity() {
-        return stockQuantity;
-    }
-
-    public String getVendor() {
-        return vendor;
-    }
 }
