@@ -1,6 +1,6 @@
 package com.upwork.stock.infrastructure.events;
 
-import com.upwork.stock.application.events.OutOfStockEvent;
+import com.upwork.stock.events.OutOfStockEvent;
 import com.upwork.stock.application.ports.EventLogger;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;

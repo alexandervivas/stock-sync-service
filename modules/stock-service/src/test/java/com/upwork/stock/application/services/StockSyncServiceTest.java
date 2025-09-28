@@ -1,7 +1,7 @@
 package com.upwork.stock.application.services;
 
 import com.upwork.stock.application.dto.ExternalProductDto;
-import com.upwork.stock.application.events.OutOfStockEvent;
+import com.upwork.stock.events.OutOfStockEvent;
 import com.upwork.stock.application.ports.EventLogger;
 import com.upwork.stock.application.ports.VendorAClient;
 import com.upwork.stock.application.ports.VendorBReader;
