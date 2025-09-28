@@ -1,6 +1,8 @@
 package com.upwork.stock.application.services;
 
 import com.upwork.stock.application.dto.ExternalProductDto;
+import com.upwork.stock.application.events.OutOfStockEvent;
+import com.upwork.stock.application.ports.EventLogger;
 import com.upwork.stock.application.ports.VendorAClient;
 import com.upwork.stock.application.ports.VendorBReader;
 import com.upwork.stock.config.StockIngestionProperties;
@@ -22,6 +24,7 @@ class StockSyncServiceTest {
         VendorAClient vendorAClient = mock(VendorAClient.class);
         VendorBReader vendorBReader = mock(VendorBReader.class);
         ProductRepository productRepository = mock(ProductRepository.class);
+        EventLogger eventLogger = mock(EventLogger.class);
 
         when(vendorAClient.fetchProducts()).thenReturn(List.of(
                 new ExternalProductDto("ABC123", "Product A", 8)
@@ -29,6 +32,7 @@ class StockSyncServiceTest {
         when(vendorBReader.readProducts()).thenReturn(List.of(
                 new ExternalProductDto("XYZ456", "Product B", 0)
         ));
+        doNothing().when(eventLogger).outOfStock(any(OutOfStockEvent.class));
 
         StockIngestionProperties stockIngestionProperties = new StockIngestionProperties(
                 new StockIngestionProperties.VendorA("http://ignored"),
@@ -36,7 +40,7 @@ class StockSyncServiceTest {
                 new StockIngestionProperties.Sync("0 */1 * * * *")
         );
 
-        StockSyncService stockSyncService = new StockSyncService(vendorAClient, vendorBReader, productRepository, stockIngestionProperties);
+        StockSyncService stockSyncService = new StockSyncService(vendorAClient, vendorBReader, productRepository, eventLogger, stockIngestionProperties);
 
         // act
         stockSyncService.syncOnce();

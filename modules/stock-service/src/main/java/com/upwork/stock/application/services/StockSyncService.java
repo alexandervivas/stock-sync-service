@@ -1,6 +1,8 @@
 package com.upwork.stock.application.services;
 
 import com.upwork.stock.application.dto.ExternalProductDto;
+import com.upwork.stock.application.events.OutOfStockEvent;
+import com.upwork.stock.application.ports.EventLogger;
 import com.upwork.stock.application.ports.VendorAClient;
 import com.upwork.stock.application.ports.VendorBReader;
 import com.upwork.stock.config.StockIngestionProperties;
@@ -12,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -23,14 +26,16 @@ public class StockSyncService {
     private final VendorAClient vendorAClient;
     private final VendorBReader vendorBReader;
     private final ProductRepository productRepository;
+    private final EventLogger eventLogger;
 
     private final ReentrantLock running = new ReentrantLock();
     private final StockIngestionProperties stockIngestionProperties;
 
-    public StockSyncService(VendorAClient vendorAClient, VendorBReader vendorBReader, ProductRepository productRepository, StockIngestionProperties stockIngestionProperties) {
+    public StockSyncService(VendorAClient vendorAClient, VendorBReader vendorBReader, ProductRepository productRepository, EventLogger eventLogger, StockIngestionProperties stockIngestionProperties) {
         this.vendorAClient = vendorAClient;
         this.vendorBReader = vendorBReader;
         this.productRepository = productRepository;
+        this.eventLogger = eventLogger;
         this.stockIngestionProperties = stockIngestionProperties;
     }
 
@@ -65,6 +70,7 @@ public class StockSyncService {
         productRepository.findBySkuAndVendor(externalProductDto.sku(), vendor).ifPresentOrElse(existing -> {
             if (productRanOutOfStock(externalProductDto, existing)) {
                 log.info("OUT-OF-STOCK detected sku={} vendor={} prev={} now=0", externalProductDto.sku(), vendor, existing.getStockQuantity());
+                eventLogger.outOfStock(new OutOfStockEvent(externalProductDto.sku(), vendor, existing.getStockQuantity(), 0, Instant.now()));
             }
 
             productRepository.save(

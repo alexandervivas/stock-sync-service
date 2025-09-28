@@ -31,7 +31,7 @@ dependencies {
     implementation("org.apache.commons:commons-csv:1.11.0")
 
     // Docs
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13")
 
     // RabbitMQ
     implementation("org.springframework.boot:spring-boot-starter-amqp")
