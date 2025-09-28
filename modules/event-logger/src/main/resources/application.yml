@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: event-logger
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+events:
+  exchange: stock.events
+  routingKey: out-of-stock
+  queue: stock.events.out-of-stock
