@@ -17,3 +17,5 @@ ingestion:
     baseUrl: http://localhost:8081
   vendorB:
     csvPath: ./data/stock.csv
+  sync:
+    cron: "0 */1 * * * *"
