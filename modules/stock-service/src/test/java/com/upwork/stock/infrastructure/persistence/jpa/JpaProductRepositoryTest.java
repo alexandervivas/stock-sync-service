@@ -1,6 +1,5 @@
 package com.upwork.stock.infrastructure.persistence.jpa;
 
-import com.upwork.stock.infrastructure.persistence.jpa.JpaProductRepository;
 import com.upwork.stock.domain.product.Product;
 import com.upwork.stock.domain.product.ProductRepository;
 import org.junit.jupiter.api.Test;

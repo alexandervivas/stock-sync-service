@@ -28,7 +28,8 @@ class CsvVendorBReaderTest {
 
         StockIngestionProperties stockIngestionProperties = new StockIngestionProperties(
                 new StockIngestionProperties.VendorA("http://localhost:8081"),
-                new StockIngestionProperties.VendorB(file.toString())
+                new StockIngestionProperties.VendorB(file.toString()),
+                new StockIngestionProperties.Sync("0 */1 * * * *")
         );
 
         CsvVendorBReader csvVendorBReader = new CsvVendorBReader(stockIngestionProperties);

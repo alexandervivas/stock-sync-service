@@ -1,6 +1,5 @@
 package com.upwork.stock.api;
 
-import com.upwork.stock.api.ProductsController;
 import com.upwork.stock.application.queries.ListProductsQuery;
 import com.upwork.stock.application.queries.ListProductsQueryHandler;
 import com.upwork.stock.application.view.ProductView;
