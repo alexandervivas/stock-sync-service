@@ -1,11 +1,11 @@
-# Stock Sync (multi‑module)
+# Stock Sync (multi‑module) + Event Logger
 
-Service to **synchronize inventory** from two vendors:
+Service to **synchronize inventory** from two vendors and emit **out‑of‑stock events** to a separate **Event Logger** microservice via RabbitMQ.
 
 * **Vendor A**: JSON API.
-* **Vendor B**: **CSV** file written to a shared volume.
-
-Exposes `GET /products` with consolidated stock and logs the **`> 0 → 0`** transition (out‑of‑stock).
+* **Vendor B**: writes a **CSV** to a shared volume.
+* **Stock Service**: consolidates inventory and detects `> 0 → 0` transitions.
+* **Event Logger**: consumes out‑of‑stock events and logs them (console for now; ready for in‑memory/db later).
 
 ---
 
@@ -15,7 +15,8 @@ Exposes `GET /products` with consolidated stock and logs the **`> 0 → 0`** tra
 modules/
 ├─ stock-service/   # Main microservice (CQRS + Ports & Adapters)
 ├─ vendor-a/        # Mock JSON API (GET /products)
-└─ vendor-b/        # CSV writer to /data/stock.csv (@Scheduled job)
+├─ vendor-b/        # CSV writer to /data/stock.csv (@Scheduled job)
+└─ event-logger/    # Event consumer (RabbitMQ) → logs to console
 ```
 
 ---
@@ -24,27 +25,55 @@ modules/
 
 * **Hexagonal / Ports & Adapters**
 
-    * Domain defines ports (`ProductRepository`, `VendorAClient`, `VendorBReader`).
-    * Infrastructure implements adapters (JPA, HTTP, Filesystem/CSV).
+    * Domain defines ports (`ProductRepository`, `VendorAClient`, `VendorBReader`, `EventLogger`).
+    * Infrastructure implements adapters (JPA, HTTP, Filesystem/CSV, AMQP).
 * **CQRS (reads)**
 
     * `application/queries/ListProductsQueryHandler` powers `GET /products`.
+* **Eventing**
+
+    * `StockSyncService` emits `OutOfStockEvent` via **RabbitMQ** (topic exchange `stock.events`, routing key `out-of-stock`).
+    * `event-logger` declares queue `stock.events.out-of-stock`, binds it, and consumes events.
 * **Persistence**
 
-    * H2 for dev/tests (table `products`, unique constraint `(sku, vendor)`).
-* **Synchronization**
+    * H2 for dev/tests (table `products`, unique `(sku, vendor)`).
 
-    * `StockSyncService` pulls from Vendor A & B, performs **upsert** by `(sku, vendor)`, and logs `>0 → 0` transitions.
+### Event payload (JSON)
+
+```jsonc
+// OutOfStockEvent
+{
+  "sku": "XYZ456",
+  "vendor": "VendorB",
+  "previousQty": 5,
+  "newQty": 0,
+  "occurredAt": "2025-09-28T20:13:42Z" // ISO‑8601
+}
+```
+
+### Flow
+
+```
+Vendor A ---->            
+            \            
+             \          +---------------------+
+Vendor B --->  ---> Stock Service --AMQP-->  RabbitMQ (exchange: stock.events)
+                                            | routing: out-of-stock       |
+                                            +---------------+-------------+
+                                                            |
+                                                            v
+                                                   Event Logger (consumer)
+```
 
 ---
 
 ## Tech Stack
 
 * Java 21, Gradle 8.14.x
-* Spring Boot 3.5.x (Web, Data JPA, Scheduling, Retry, AOP)
+* Spring Boot 3.5.x (Web, Data JPA, Scheduling, Retry, AOP, AMQP)
 * H2 (dev/test), springdoc‑openapi (Swagger UI)
-* JUnit 5, AssertJ, Mockito (`@MockitoBean`)
-* Docker & Docker Compose
+* RabbitMQ 3.x (dockerized, with management UI)
+* JUnit 5, AssertJ, Mockito
 
 ---
 
@@ -75,9 +104,23 @@ From the **repo root**:
 
 ---
 
-## Local run (no Docker)
+## Local run (without Docker)
 
-### 1) Default configs
+Two options:
+
+1. **Simplest**: keep eventing off and log to console in `stock-service`.
+
+   ```yaml
+   # modules/stock-service/src/main/resources/application.yml
+   events:
+     sink: console  # no RabbitMQ required
+   ```
+
+   Then run vendors + stock-service as before (5s/7s crons) — see below.
+
+2. **With RabbitMQ locally**: run a local RabbitMQ or use Docker only for Rabbit; set `events.sink=rabbit` and `spring.rabbitmq.*` to your broker.
+
+### Default local configs (no Docker)
 
 * `vendor-a` on **8081**
 * `vendor-b` writes `./data/stock.csv` every **5s** (alternating 5 ↔ 0)
@@ -108,9 +151,26 @@ springdoc:
 logging:
   level:
     com.upwork.stock: INFO
+
+# Event sink (choose one)
+# events:
+#   sink: console  # ← default for local without Rabbit
+#   # sink: rabbit
+#
+# spring:
+#   rabbitmq:
+#     host: localhost
+#     port: 5672
+#     username: guest
+#     password: guest
+#
+# events:
+#   broker:
+#     exchange: stock.events
+#     routingKey: out-of-stock
 ```
 
-### 2) Start
+### Start locally
 
 ```bash
 # Terminal A
@@ -119,11 +179,11 @@ logging:
 # Terminal B
 ./gradlew :modules:vendor-b:bootRun
 
-# Terminal C
+# Terminal C (console sink or Rabbit configured)
 ./gradlew :modules:stock-service:bootRun
 ```
 
-### 3) Try it
+### Try it
 
 ```bash
 # Vendor A (mock JSON)
@@ -132,27 +192,15 @@ curl -s http://localhost:8081/products | jq .
 # Consolidated inventory
 curl -s http://localhost:8080/products | jq .
 
-# Swagger UI
+# Swagger UI (stock-service)
 open http://localhost:8080/swagger-ui.html
 ```
 
-### 4) Out‑of‑stock logs
-
-With staggered crons (5s vs 7s) you should see in `stock-service`:
-
-```
-OUT-OF-STOCK detected sku=XYZ456 vendor=VendorB prev=5 now=0
-```
-
-If not:
-
-* Verify **CSV path** matches in both modules.
-* Increase log level: `logging.level.com.upwork.stock=DEBUG`.
-* Restart `vendor-b` to reset its alternation (starts at 5).
+Out‑of‑stock transition log appears when `VendorB` flips 5→0 and a sync runs.
 
 ---
 
-## Docker & Compose
+## Docker & Compose (recommended)
 
 ### Dockerfiles
 
@@ -161,13 +209,15 @@ Located under `deploy/docker/` using Gradle official image for build stage:
 * `deploy/docker/stock-service.Dockerfile`
 * `deploy/docker/vendor-a.Dockerfile`
 * `deploy/docker/vendor-b.Dockerfile`
+* `deploy/docker/event-logger.Dockerfile`
 
 > **Spring relaxed binding** examples:
 >
 > * `INGESTION_VENDORA_BASEURL` → `ingestion.vendorA.baseUrl`
 > * `INGESTION_VENDORB_CSVPATH` → `ingestion.vendorB.csvPath`
 > * `INGESTION_SYNC_CRON` → `ingestion.sync.cron`
-> * `VENDORB_*` → `vendorb.*`
+> * `EVENTS_*` (stock-service) → `events.broker.*` & `events.sink`
+> * `VENDORB_*` (vendor-b) → `vendorb.*`
 
 ### Commands
 
@@ -178,44 +228,77 @@ docker compose up -d
 # Logs
 docker compose logs -f vendor-b
 docker compose logs -f stock-service
+docker compose logs -f event-logger
 
 # Try
 curl -s http://localhost:8080/products | jq .
 open http://localhost:8080/swagger-ui.html
+open http://localhost:15672  # Rabbit UI (guest/guest)
 ```
 
 ---
 
 ## Endpoints
 
-* `GET /products` → List of `{ id, sku, name, stockQuantity, vendor }`.
-* Swagger UI → `/swagger-ui.html`
-  OpenAPI → `/v3/api-docs`, `/v3/api-docs.yaml`.
+* **stock-service**
+
+    * `GET /products` → List of `{ id, sku, name, stockQuantity, vendor }`.
+    * Swagger UI → `/swagger-ui.html`; OpenAPI → `/v3/api-docs(.yaml)`.
+* **vendor-a**
+
+    * `GET /products` (mock JSON) → used by stock-service.
+* **event-logger**
+
+    * (No HTTP yet) — consumes from Rabbit and logs to console.
+
+---
+
+## Relevant structure
+
+```
+modules/stock-service/src/main/java/com/upwork/stock/
+├─ api/ProductsController.java
+├─ application/
+│  ├─ dto/ExternalProductDto.java
+│  ├─ ports/{VendorAClient,VendorBReader,EventLogger}.java
+│  ├─ services/StockSyncService.java
+│  └─ queries/{ListProductsQuery, ListProductsQueryHandler}.java
+├─ config/{Config.java, OpenApiConfig.java, StockIngestionProperties.java, RabbitConfig.java}
+├─ domain/product/{Product.java, ProductRepository.java}
+└─ infrastructure/
+   ├─ fs/CsvVendorBReader.java
+   ├─ http/HttpVendorAClient.java
+   └─ persistence/jpa/{JpaProductRepository.java, SpringDataProductRepository.java}
+
+modules/event-logger/src/main/java/com/upwork/eventlogger/
+├─ EventLoggerApplication.java
+├─ config/RabbitConfig.java
+└─ consumers/OutOfStockListener.java
+```
 
 ---
 
 ## Testing notes
 
 * Prefer `@MockitoBean` over deprecated `@MockBean` (Boot 3.4+).
-* Repository tests with `@DataJpaTest` and H2 in‑memory.
-* Web tests with `@WebMvcTest` and record DTOs for responses.
-* For `StockSyncServiceTest`, mock `VendorAClient`, `VendorBReader`, `ProductRepository`, and pass a dummy `StockIngestionProperties`.
+* Repo tests: `@DataJpaTest` + H2.
+* Web tests: `@WebMvcTest` + record DTOs.
+* `StockSyncServiceTest`: mock `VendorAClient`, `VendorBReader`, `ProductRepository`, pass a dummy `StockIngestionProperties`, and verify `EventLogger.outOfStock(...)` once on transition.
 
 ---
 
 ## Troubleshooting
 
-* **Gradle/Wrapper in Docker**: build stage uses `gradle:8.14.3-jdk21` → no wrapper required inside the container.
-* **“Could not determine java version from '25'”**: run with JDK 21; set `org.gradle.java.home` or `asdf local java …`.
-* **No OUT‑OF‑STOCK log**: ensure staggered crons (e.g., 5s/7s), shared CSV path, and proper log level. Restart `vendor-b` to reset its alternation.
-* **`vendorBProperties` missing**: in `vendor-b` we use `@EnableConfigurationProperties(VendorBProperties.class)` and `@Scheduled(cron = "${vendorb.schedule}")` (no SpEL by bean name).
+* **No OUT‑OF‑STOCK log**: ensure staggered crons (e.g., 5s/7s), shared CSV path, and proper log level. Restart `vendor-b` to reset alternation.
+* **Rabbit consumer fails to deserialize `Instant`**: ensure `event-logger` has `spring-boot-starter-json` and both producer/consumer use `Jackson2JsonMessageConverter(ObjectMapper)` (Boot’s mapper includes `JavaTimeModule`).
+* **Gradle/Wrapper in Docker**: build stage uses `gradle:8.14.3-jdk21` → wrapper not required in container.
+* **JDK mismatch**: run builds/tests with JDK 21.
 
 ---
 
-## Roadmap
+## Roadmap (optional)
 
-* `POST /admin/sync` to trigger on‑demand sync.
-* Persist out‑of‑stock events and expose `GET /events`.
+* Expose `GET /events` in `event-logger` (in‑memory list or DB persistence).
+* Persist events in a DB (H2/Postgres) with time window queries.
 * Pagination/filters in `GET /products`.
-* Migrate H2 → Postgres (with Testcontainers in tests).
-* Metrics with Actuator.
+* Metrics & health with Actuator.
