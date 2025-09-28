@@ -4,10 +4,12 @@ import com.upwork.stock.eventlogger.events.OutOfStockEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+@Component
 public class OutOfStockListener {
 
     private static final Logger log = LoggerFactory.getLogger(OutOfStockListener.class);

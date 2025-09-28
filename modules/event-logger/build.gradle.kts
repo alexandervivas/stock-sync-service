@@ -11,7 +11,8 @@ description = "Event Logger Service"
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-amqp")
-    implementation("com.fasterxml.jackson.core:jackson-databind")
+
+    implementation("org.springframework.boot:spring-boot-starter-json")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.assertj:assertj-core")

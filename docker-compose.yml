@@ -23,6 +23,31 @@ services:
     volumes:
       - vendor_b_data:/data
 
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # UI http://localhost:15672 (guest/guest)
+    environment:
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbitmq_stream advertised_host localhost"
+
+  event-logger:
+    build:
+      context: .
+      dockerfile: deploy/docker/event-logger.Dockerfile
+    container_name: event-logger
+    depends_on:
+      - rabbitmq
+    environment:
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+      - EVENTS_EXCHANGE=stock.events
+      - EVENTS_ROUTINGKEY=out-of-stock
+      - EVENTS_QUEUE=stock.events.out-of-stock
+
   stock-service:
     build:
       context: .
@@ -31,11 +56,19 @@ services:
     depends_on:
       - vendor-a
       - vendor-b
+      - rabbitmq
     environment:
       - INGESTION_VENDORA_BASEURL=http://vendor-a:8081
       - INGESTION_VENDORB_CSVPATH=/data/stock.csv
       - INGESTION_SYNC_CRON=*/7 * * * * *
       - SERVER_PORT=8080
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=guest
+      - SPRING_RABBITMQ_PASSWORD=guest
+      - EVENTS_SINK=rabbit
+      - EVENTS_BROKER_EXCHANGE=stock.events
+      - EVENTS_BROKER_ROUTINGKEY=out-of-stock
     ports:
       - "8080:8080"
     volumes:
