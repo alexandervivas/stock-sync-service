@@ -23,6 +23,13 @@ dependencies {
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
 
+    // Vendor A
+    implementation("org.springframework.retry:spring-retry")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+
+    // Vendor B
+    implementation("org.apache.commons:commons-csv:1.11.0")
+
     // tests
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.assertj:assertj-core")

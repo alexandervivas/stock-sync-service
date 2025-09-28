@@ -12,3 +12,8 @@ spring:
     console:
       enabled: true
       path: /h2-console
+ingestion:
+  vendorA:
+    baseUrl: http://localhost:8081
+  vendorB:
+    csvPath: ./data/stock.csv
